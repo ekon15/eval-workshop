@@ -61,6 +61,10 @@ Tick each one off as you go. Each module has its own README with the detail.
 - [ ] **3. Module 12 — Online scoring.** See `module-12/README.md`
 - [ ] **4. Module 14 — Improvement loop.** See `module-14/README.md`
 
+### Stretch (if you finish early)
+
+- [ ] **Playground — same primitives, no code.** See `module-playground/README.md`
+
 ## Why the modules split offline vs online
 
 Modules 06 and 14 isolate the analysis step (single LLM call per row, metrics pre-computed in dataset metadata). Modules 10 and 12 run the full multi-turn tool-using agent. This split keeps offline evals fast and deterministic while still demonstrating the agentic loop end-to-end.
