@@ -8,11 +8,11 @@ Anthropic tool-use loop. Input: a ticker + a date range.
 
 ```
 run_skill (root)
-  ├── llm_turn_1                  LLM turn 1 — decides to call query_transactions
-  ├── tool:query_transactions     data fetch (mocks Snowflake MCP, reads CSV)
-  ├── llm_turn_2                  LLM turn 2 — decides to call run_compute_script
-  ├── tool:run_compute_script     subprocess → scripts/compute_metrics.py
-  └── llm_turn_3                  LLM turn 3 — writes the analysis
+  ├── anthropic.messages.create   LLM turn 1 — decides to call query_transactions
+  ├── tool:query_transactions      data fetch (mocks Snowflake MCP, reads CSV)
+  ├── anthropic.messages.create   LLM turn 2 — decides to call run_compute_script
+  ├── tool:run_compute_script      subprocess → scripts/compute_metrics.py
+  └── anthropic.messages.create   LLM turn 3 — writes the analysis
 ```
 
 The agent mirrors the Claude Skills shape (instructions + tool calls + `scripts/` directory). In production the data-fetch step is a Snowflake MCP call; here it's a CSV read so the workshop has zero connectivity.

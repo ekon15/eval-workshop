@@ -8,17 +8,14 @@ Built on Anthropic tool use. The agent loop:
     Tool:        subprocess invokes scripts/compute_metrics.py
     LLM turn N:  produces the written analysis (no more tool_use)
 
-Tracing uses explicit start_span context managers so the trace tree is:
+Trace tree:
 
     run_skill (root)
-      |- llm_turn_1
+      |- anthropic.messages.create   (auto-traced by wrap_anthropic)
       |- tool:query_transactions
-      |- llm_turn_2
+      |- anthropic.messages.create
       |- tool:run_compute_script
-      |- llm_turn_3   (writes the analysis)
-
-Each span's input/output is set explicitly to plain strings/dicts so the UI
-shows clean values instead of raw Anthropic content blocks.
+      |- anthropic.messages.create   (final analysis turn)
 """
 from __future__ import annotations
 import json
@@ -42,12 +39,16 @@ def get_client():
     global _client
     if _client is None:
         if os.environ.get("USE_BRAINTRUST_PROXY"):
-            _client = anthropic.Anthropic(
-                api_key=os.environ["BRAINTRUST_API_KEY"],
-                base_url="https://api.braintrust.dev/v1/proxy",
+            _client = braintrust.wrap_anthropic(
+                anthropic.Anthropic(
+                    api_key=os.environ["BRAINTRUST_API_KEY"],
+                    base_url="https://api.braintrust.dev/v1/proxy",
+                )
             )
         else:
-            _client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+            _client = braintrust.wrap_anthropic(
+                anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
+            )
     return _client
 
 
@@ -102,42 +103,6 @@ class AgentResult:
     tool_errors: list[str] = field(default_factory=list)
 
 
-def _block_to_dict(block):
-    """Flatten an Anthropic response block to a plain dict for logging."""
-    t = getattr(block, "type", None)
-    if t == "text":
-        return {"type": "text", "text": block.text}
-    if t == "tool_use":
-        return {"type": "tool_use", "name": block.name, "input": block.input}
-    return {"type": t, "repr": str(block)}
-
-
-def _summarize_messages(messages):
-    """Flat, readable view of the conversation so far for span input."""
-    out = []
-    for m in messages:
-        role = m["role"]
-        c = m["content"]
-        if isinstance(c, str):
-            out.append({"role": role, "text": c})
-        elif isinstance(c, list):
-            parts = []
-            for block in c:
-                if isinstance(block, dict):
-                    if block.get("type") == "tool_result":
-                        body = block.get("content", "")
-                        if isinstance(body, str) and len(body) > 400:
-                            body = body[:400] + "...[truncated]"
-                        parts.append({"type": "tool_result", "content": body,
-                                      "is_error": block.get("is_error", False)})
-                    else:
-                        parts.append(block)
-                else:
-                    parts.append(_block_to_dict(block))
-            out.append({"role": role, "blocks": parts})
-    return out
-
-
 def _execute_tool(name: str, args: dict):
     if name == "query_transactions":
         with braintrust.start_span(name="tool:query_transactions", type="tool") as span:
@@ -171,27 +136,15 @@ def run_skill(ticker: str, start_date: str, end_date: str,
     with _logger.start_span(name="run_skill", type="task") as root:
         root.log(input=user_msg)
 
-        for turn_idx in range(1, MAX_TURNS + 1):
-            with braintrust.start_span(name=f"llm_turn_{turn_idx}", type="llm") as llm_span:
-                resp = client.messages.create(
-                    model=MODEL,
-                    max_tokens=2048,
-                    system=system,
-                    tools=TOOLS,
-                    messages=messages,
-                )
-                stop_reason = resp.stop_reason or ""
-                resp_blocks = [_block_to_dict(b) for b in resp.content]
-                llm_span.log(
-                    input={"messages": _summarize_messages(messages), "system": system[:300] + ("..." if len(system) > 300 else "")},
-                    output=resp_blocks,
-                    metadata={
-                        "model": MODEL,
-                        "stop_reason": stop_reason,
-                        "input_tokens": getattr(resp.usage, "input_tokens", None),
-                        "output_tokens": getattr(resp.usage, "output_tokens", None),
-                    },
-                )
+        for _ in range(MAX_TURNS):
+            resp = client.messages.create(
+                model=MODEL,
+                max_tokens=2048,
+                system=system,
+                tools=TOOLS,
+                messages=messages,
+            )
+            stop_reason = resp.stop_reason or ""
 
             if stop_reason != "tool_use":
                 for block in resp.content:

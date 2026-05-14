@@ -2,11 +2,11 @@
 
 Each invocation produces a multi-span trace:
     run_skill (root)
-      |- llm_turn_1              (LLM decides to call query_transactions)
-      |- tool:query_transactions  (executes the data fetch)
-      |- llm_turn_2              (LLM decides to call run_compute_script)
-      |- tool:run_compute_script  (subprocess: scripts/compute_metrics.py)
-      |- llm_turn_3              (LLM writes the analysis)
+      |- anthropic.messages.create  (LLM turn 1: decides to call query_transactions)
+      |- tool:query_transactions     (executes the data fetch)
+      |- anthropic.messages.create  (LLM turn 2: decides to call run_compute_script)
+      |- tool:run_compute_script     (subprocess: scripts/compute_metrics.py)
+      |- anthropic.messages.create  (LLM turn 3: writes the analysis)
 """
 from __future__ import annotations
 import sys

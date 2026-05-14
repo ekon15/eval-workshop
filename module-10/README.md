@@ -8,11 +8,11 @@ Each invocation produces this kind of trace:
 
 ```
 run_skill (root)
-  ├── llm_turn_1                  LLM turn 1 — emits tool_use: query_transactions
+  ├── anthropic.messages.create   LLM turn 1 — emits tool_use: query_transactions
   ├── tool:query_transactions     fetched rows
-  ├── llm_turn_2                  LLM turn 2 — emits tool_use: run_compute_script
+  ├── anthropic.messages.create   LLM turn 2 — emits tool_use: run_compute_script
   ├── tool:run_compute_script     subprocess output: metrics
-  └── llm_turn_3                  LLM turn 3 — final analysis text
+  └── anthropic.messages.create   LLM turn 3 — final analysis text
 ```
 
 Click into each LLM call to see the messages sent (including the tool definitions and prior tool results). Click into each tool span to see the inputs and outputs.
