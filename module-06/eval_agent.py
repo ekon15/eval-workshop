@@ -46,10 +46,12 @@ def _judge(prompt: str, name: str):
 
 def analysis_completeness(input, output, expected, **_):
     return _judge(
-        f"""Score how well this trading analysis covers the expected topics. Pick exactly ONE of:
-  - COMPLETE (1.0): covers all expected topics with grounded numbers
-  - PARTIAL  (0.5): covers some expected topics or is vague
-  - MISSING  (0.0): misses the expected topics entirely
+        f"""Score how completely this analysis covers the expected topics. Apply STRICT criteria — generic mentions count as PARTIAL, not COMPLETE.
+
+Pick exactly ONE of:
+  - COMPLETE (1.0): the analysis explicitly cites EACH expected topic with specific figures from the metrics — no vague paraphrasing, no skipped topics, no editorial filler
+  - PARTIAL  (0.5): touches the expected topics but is vague, paraphrases without specifics, omits one topic, or pads with speculation
+  - MISSING  (0.0): misses two or more expected topics entirely
 
 Query: {input}
 Expected coverage: {expected}
@@ -62,10 +64,12 @@ def analysis_groundedness(input, output, expected, metadata=None, **_):
     md = _ensure_dict(metadata)
     metrics_json = json.dumps(md.get("metrics", {}), default=str)
     return _judge(
-        f"""Score whether the numbers in the analysis are grounded in the metrics. Pick exactly ONE of:
-  - GROUNDED  (1.0): every number cited is in or trivially derived from the metrics
-  - PARTIAL   (0.5): mostly grounded, one or two unsupported claims
-  - FABRICATED (0.0): invented figures or contradicts the metrics
+        f"""Score whether the numbers in the analysis are grounded in the metrics. Apply STRICT criteria — figures that are interpreted, rounded, or characterized rather than copied directly count as PARTIAL.
+
+Pick exactly ONE of:
+  - GROUNDED  (1.0): every numeric or quantitative claim in the analysis appears verbatim in (or is exact trivial arithmetic on) the metrics. No rounding, no qualitative substitutions ("substantial", "minimal"), no inferred trends.
+  - PARTIAL   (0.5): mostly grounded but contains rounding, vague quantifiers, or inferred patterns not present in the metrics
+  - FABRICATED (0.0): cites figures not in the metrics, or contradicts the metrics
 
 Metrics: {metrics_json}
 Analysis: {output}""",
