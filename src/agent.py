@@ -28,7 +28,12 @@ import braintrust
 from .tools import query_transactions, run_compute_script
 from .prompts import SKILL_SYSTEM
 
-PROJECT = os.environ.get("BRAINTRUST_PROJECT", "eval-workshop")
+PROJECT = os.environ.get("BRAINTRUST_PROJECT")
+if not PROJECT:
+    raise SystemExit(
+        "BRAINTRUST_PROJECT is not set. Export it before running any module:\n"
+        '    export BRAINTRUST_PROJECT="eval-workshop-<your-username>"'
+    )
 MODEL = os.environ.get("EVAL_MODEL", "claude-haiku-4-5-20251001")
 MAX_TURNS = 6
 

@@ -35,13 +35,17 @@ pip install -r requirements.txt
 export BRAINTRUST_API_KEY="..."
 export ANTHROPIC_API_KEY="..."
 
+# Your Braintrust project — REQUIRED. Use your own project so attendees
+# don't share traces, datasets, or experiments.
+export BRAINTRUST_PROJECT="eval-workshop-<your-username>"
+
 # Verify
 python3 -c "import braintrust, anthropic; print('OK')"
 ```
 
 > Note: `pip install braintrust` also installs a `bt` CLI binary. This workshop uses the Python SDK throughout — the CLI is not required and not used in any module.
 
-In the Braintrust UI for your project, upload the two datasets via **Datasets → New Dataset**. The UI auto-names them based on the filename — accept the defaults:
+In the Braintrust UI, create the project named in `BRAINTRUST_PROJECT` (top right → **+ New project**). Then upload the two datasets via **Datasets → New Dataset**. The UI auto-names them based on the filename — accept the defaults:
 
   - `Gold Standard` ← `data/gold_standard.csv`
   - `Failure Modes` ← `data/failure_modes.csv`
@@ -78,4 +82,4 @@ Wired into the data so attendees have real failures to investigate. Surface acro
 
 ## Project
 
-Traces land in the Braintrust project `eval-workshop` (override via `BRAINTRUST_PROJECT`).
+Every module reads `BRAINTRUST_PROJECT` from the environment — there is no default. If it is unset, the modules exit with an error pointing you back to Setup.
