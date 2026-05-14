@@ -2,14 +2,23 @@
 
 Built on Anthropic tool use. The agent loop:
 
-    LLM turn 1:  emits tool_use → query_transactions(ticker, start, end)
+    LLM turn 1:  emits tool_use -> query_transactions(ticker, start, end)
     Tool:        returns rows from transactions.csv
-    LLM turn 2:  emits tool_use → run_compute_script(transactions, ticker)
+    LLM turn 2:  emits tool_use -> run_compute_script(transactions, ticker)
     Tool:        subprocess invokes scripts/compute_metrics.py
     LLM turn N:  produces the written analysis (no more tool_use)
 
-Each LLM turn and each tool execution is its own Braintrust span under the
-root `run_skill` span. The trace tree looks like a real agentic workflow.
+Tracing uses explicit start_span context managers so the trace tree is:
+
+    run_skill (root)
+      |- llm_turn_1
+      |- tool:query_transactions
+      |- llm_turn_2
+      |- tool:run_compute_script
+      |- llm_turn_3   (writes the analysis)
+
+Each span's input/output is set explicitly to plain strings/dicts so the UI
+shows clean values instead of raw Anthropic content blocks.
 """
 from __future__ import annotations
 import json
@@ -26,26 +35,19 @@ PROJECT = os.environ.get("BRAINTRUST_PROJECT", "eval-workshop")
 MODEL = os.environ.get("EVAL_MODEL", "claude-haiku-4-5-20251001")
 MAX_TURNS = 6
 
-braintrust.init_logger(project=PROJECT)
+_logger = braintrust.init_logger(project=PROJECT)
 
 _client = None
 def get_client():
     global _client
     if _client is None:
-        # Default: hit Anthropic directly. Braintrust still traces via wrap_anthropic.
-        # Opt-in proxy: set USE_BRAINTRUST_PROXY=1 to route model calls through
-        # the Braintrust proxy (gives caching + cost tracking).
         if os.environ.get("USE_BRAINTRUST_PROXY"):
-            _client = braintrust.wrap_anthropic(
-                anthropic.Anthropic(
-                    api_key=os.environ["BRAINTRUST_API_KEY"],
-                    base_url="https://api.braintrust.dev/v1/proxy",
-                )
+            _client = anthropic.Anthropic(
+                api_key=os.environ["BRAINTRUST_API_KEY"],
+                base_url="https://api.braintrust.dev/v1/proxy",
             )
         else:
-            _client = braintrust.wrap_anthropic(
-                anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
-            )
+            _client = anthropic.Anthropic(api_key=os.environ["ANTHROPIC_API_KEY"])
     return _client
 
 
@@ -100,34 +102,62 @@ class AgentResult:
     tool_errors: list[str] = field(default_factory=list)
 
 
+def _block_to_dict(block):
+    """Flatten an Anthropic response block to a plain dict for logging."""
+    t = getattr(block, "type", None)
+    if t == "text":
+        return {"type": "text", "text": block.text}
+    if t == "tool_use":
+        return {"type": "tool_use", "name": block.name, "input": block.input}
+    return {"type": t, "repr": str(block)}
+
+
+def _summarize_messages(messages):
+    """Flat, readable view of the conversation so far for span input."""
+    out = []
+    for m in messages:
+        role = m["role"]
+        c = m["content"]
+        if isinstance(c, str):
+            out.append({"role": role, "text": c})
+        elif isinstance(c, list):
+            parts = []
+            for block in c:
+                if isinstance(block, dict):
+                    if block.get("type") == "tool_result":
+                        body = block.get("content", "")
+                        if isinstance(body, str) and len(body) > 400:
+                            body = body[:400] + "...[truncated]"
+                        parts.append({"type": "tool_result", "content": body,
+                                      "is_error": block.get("is_error", False)})
+                    else:
+                        parts.append(block)
+                else:
+                    parts.append(_block_to_dict(block))
+            out.append({"role": role, "blocks": parts})
+    return out
+
+
 def _execute_tool(name: str, args: dict):
     if name == "query_transactions":
-        @braintrust.traced(name="tool:query_transactions", type="tool")
-        def _t():
+        with braintrust.start_span(name="tool:query_transactions", type="tool") as span:
             r = query_transactions(args["ticker"], args["start_date"], args["end_date"])
-            braintrust.current_span().log(input=args, output={"row_count": len(r), "rows": r})
+            span.log(input=args, output={"row_count": len(r), "rows": r})
             return r
-        return _t()
     if name == "run_compute_script":
-        @braintrust.traced(name="tool:run_compute_script", type="tool")
-        def _t():
+        with braintrust.start_span(name="tool:run_compute_script", type="tool") as span:
             r = run_compute_script(args["transactions"], args["ticker"])
-            braintrust.current_span().log(
+            span.log(
                 input={"transaction_count": len(args["transactions"]), "ticker": args["ticker"]},
                 output=r,
             )
             return r
-        return _t()
     raise ValueError(f"unknown tool: {name}")
 
 
-@braintrust.traced(name="run_skill")
 def run_skill(ticker: str, start_date: str, end_date: str,
               system_prompt: str | None = None) -> AgentResult:
     """Run the skill end-to-end. Returns AgentResult with analysis + tool trace."""
-    span = braintrust.current_span()
-    span.log(input={"ticker": ticker, "start_date": start_date, "end_date": end_date})
-
     system = system_prompt or SKILL_SYSTEM
     user_msg = f"Analyze portfolio transactions for ticker {ticker} from {start_date} to {end_date}."
     messages: list[dict] = [{"role": "user", "content": user_msg}]
@@ -138,60 +168,71 @@ def run_skill(ticker: str, start_date: str, end_date: str,
     final_text = ""
     stop_reason = ""
 
-    for _ in range(MAX_TURNS):
-        resp = client.messages.create(
-            model=MODEL,
-            max_tokens=2048,
-            system=system,
-            tools=TOOLS,
-            messages=messages,
-        )
-        stop_reason = resp.stop_reason or ""
+    with _logger.start_span(name="run_skill", type="task") as root:
+        root.log(input=user_msg)
 
-        if stop_reason != "tool_use":
+        for turn_idx in range(1, MAX_TURNS + 1):
+            with braintrust.start_span(name=f"llm_turn_{turn_idx}", type="llm") as llm_span:
+                resp = client.messages.create(
+                    model=MODEL,
+                    max_tokens=2048,
+                    system=system,
+                    tools=TOOLS,
+                    messages=messages,
+                )
+                stop_reason = resp.stop_reason or ""
+                resp_blocks = [_block_to_dict(b) for b in resp.content]
+                llm_span.log(
+                    input={"messages": _summarize_messages(messages), "system": system[:300] + ("..." if len(system) > 300 else "")},
+                    output=resp_blocks,
+                    metadata={
+                        "model": MODEL,
+                        "stop_reason": stop_reason,
+                        "input_tokens": getattr(resp.usage, "input_tokens", None),
+                        "output_tokens": getattr(resp.usage, "output_tokens", None),
+                    },
+                )
+
+            if stop_reason != "tool_use":
+                for block in resp.content:
+                    if getattr(block, "type", None) == "text":
+                        final_text = block.text
+                break
+
+            messages.append({"role": "assistant", "content": resp.content})
+
+            tool_results = []
             for block in resp.content:
-                if getattr(block, "type", None) == "text":
-                    final_text = block.text
-            break
+                if getattr(block, "type", None) != "tool_use":
+                    continue
+                tool_calls.append({"name": block.name, "input": block.input})
+                try:
+                    result = _execute_tool(block.name, block.input)
+                    content = json.dumps(result, default=str)
+                    is_error = False
+                except Exception as e:
+                    err = f"{type(e).__name__}: {e}"
+                    tool_errors.append(f"{block.name}: {err}")
+                    content = json.dumps({"error": err})
+                    is_error = True
+                tool_results.append({
+                    "type": "tool_result",
+                    "tool_use_id": block.id,
+                    "content": content,
+                    "is_error": is_error,
+                })
+            messages.append({"role": "user", "content": tool_results})
 
-        # Append assistant turn with the tool_use blocks
-        messages.append({"role": "assistant", "content": resp.content})
+        root.log(
+            output=final_text,
+            metadata={
+                "tool_call_count": len(tool_calls),
+                "tools_used": [c["name"] for c in tool_calls],
+                "stop_reason": stop_reason,
+                "tool_errors": tool_errors,
+            },
+        )
 
-        tool_results = []
-        for block in resp.content:
-            if getattr(block, "type", None) != "tool_use":
-                continue
-            tool_calls.append({"name": block.name, "input": block.input})
-            try:
-                result = _execute_tool(block.name, block.input)
-                content = json.dumps(result, default=str)
-                is_error = False
-            except Exception as e:
-                err = f"{type(e).__name__}: {e}"
-                tool_errors.append(f"{block.name}: {err}")
-                content = json.dumps({"error": err})
-                is_error = True
-            tool_results.append({
-                "type": "tool_result",
-                "tool_use_id": block.id,
-                "content": content,
-                "is_error": is_error,
-            })
-        messages.append({"role": "user", "content": tool_results})
-
-    span.log(
-        output=final_text,
-        metadata={
-            "tool_call_count": len(tool_calls),
-            "tools_used": [c["name"] for c in tool_calls],
-            "stop_reason": stop_reason,
-            "tool_errors": tool_errors,
-        },
-    )
-
-    # Force span finalization so the trace tree is fully populated in the UI
-    # before the caller checks it. Without this, late spans can show as
-    # "in progress" if the SDK batches the flush.
     braintrust.flush()
 
     return AgentResult(
