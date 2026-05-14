@@ -50,46 +50,16 @@ Other CSVs (`companies.csv`, `transactions.csv`) are the agent's data source —
 
 ## Walk through the modules in this order
 
-Each module has its own README with the full walkthrough. Run them sequentially — they build on each other.
+Tick each one off as you go. Each module has its own README with the detail.
 
-**Module 06 — Code eval** *(~12 min)*
+- [ ] **1. Module 06 — Code eval.** Open `module-06/README.md`, then: `python3 module-06/eval_agent.py`
+- [ ] **2. Module 10 — Multi-step agent + tracing.** Open `module-10/README.md`, then: `python3 module-10/interactive.py`
+- [ ] **3. Module 12 — Online scoring.** Open `module-12/README.md` — configure the UI scorer first, then: `python3 module-12/generate_runs.py`
+- [ ] **4. Module 14 — Improvement loop.** Open `module-14/README.md`, then: `python3 module-14/eval_baseline.py` and `python3 module-14/eval_improved.py`
 
-```bash
-python3 module-06/eval_agent.py
-```
+## Why the modules split offline vs online
 
-Runs an eval against the `Gold Standard` dataset. Single LLM call per row (the analysis step). See 15 scored rows in Braintrust. Inspect rows that scored <1.0 — those are real failures. Full walkthrough: `module-06/README.md`.
-
-**Module 10 — Multi-step agent + tracing** *(~15 min)*
-
-```bash
-python3 module-10/interactive.py
-```
-
-Interactive CLI. Enter a ticker (try `VRTC`, `GROK`, `ASPN`, `XXXX`) + date range. Watch the full agent loop (3 LLM turns + 2 tool calls) land as a trace tree in Braintrust. Full walkthrough: `module-10/README.md`.
-
-**Module 12 — Online scoring** *(~12 min)*
-
-First configure an online scorer in the BT UI (see `module-12/README.md` for exact steps — it's a one-time UI setup). Then:
-
-```bash
-python3 module-12/generate_runs.py
-```
-
-22 fresh agent runs, scored server-side automatically. No code change required to add scoring to production.
-
-**Module 14 — Improvement loop** *(~15 min)*
-
-```bash
-python3 module-14/eval_baseline.py
-python3 module-14/eval_improved.py
-```
-
-Same dataset, two prompts. Compare experiments side-by-side in BT — the metric should move. Full walkthrough: `module-14/README.md`.
-
-## Why this works
-
-Modules 06 and 14 isolate the analysis step (single LLM call per row, metrics pre-computed in dataset metadata). Modules 10 and 12 run the full multi-turn tool-using agent. This split keeps evals fast and deterministic while still demonstrating the agentic loop end-to-end.
+Modules 06 and 14 isolate the analysis step (single LLM call per row, metrics pre-computed in dataset metadata). Modules 10 and 12 run the full multi-turn tool-using agent. This split keeps offline evals fast and deterministic while still demonstrating the agentic loop end-to-end.
 
 To rebuild the metrics-enriched CSVs (e.g., after editing the seed lists or upstream tools):
 
