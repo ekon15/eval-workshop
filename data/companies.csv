@@ -1,0 +1,11 @@
+ticker,name,sector,country,status
+VRTC,Vertica Industries,Industrials,US,active
+NBLA,Nubela Corp,Technology,US,renamed_from_old_name_corp
+TLKM,TeleKom Holdings,Communications,DE,active
+HRZN,Horizon Materials,Materials,NO,active
+ASPN,Aspen Energy,Energy,NO,active
+KMRL,Kameral Pharma,Healthcare,CH,active
+FJDL,Fjordal Banking,Financials,NO,active
+OSLB,Oslo Beverages,Consumer,NO,active
+CLVR,Clavier Software,Technology,FR,active
+GROK,Grokstad Mining,Materials,NO,active
