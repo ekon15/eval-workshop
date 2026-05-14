@@ -52,10 +52,10 @@ Other CSVs (`companies.csv`, `transactions.csv`) are the agent's data source —
 
 Tick each one off as you go. Each module has its own README with the detail.
 
-- [ ] **1. Module 06 — Code eval.** Open `module-06/README.md`, then: `python3 module-06/eval_agent.py`
-- [ ] **2. Module 10 — Multi-step agent + tracing.** Open `module-10/README.md`, then: `python3 module-10/interactive.py`
-- [ ] **3. Module 12 — Online scoring.** Open `module-12/README.md` — configure the UI scorer first, then: `python3 module-12/generate_runs.py`
-- [ ] **4. Module 14 — Improvement loop.** Open `module-14/README.md`, then: `python3 module-14/eval_baseline.py` and `python3 module-14/eval_improved.py`
+- [ ] **1. Module 06 — Code eval.** See `module-06/README.md`
+- [ ] **2. Module 10 — Multi-step agent + tracing.** See `module-10/README.md`
+- [ ] **3. Module 12 — Online scoring.** See `module-12/README.md`
+- [ ] **4. Module 14 — Improvement loop.** See `module-14/README.md`
 
 ## Why the modules split offline vs online
 
