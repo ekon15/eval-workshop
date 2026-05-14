@@ -20,10 +20,24 @@ The agent mirrors the Claude Skills shape (instructions + tool calls + `scripts/
 ## Setup
 
 ```bash
+# Clone
+git clone https://github.com/ekon15/eval-workshop
+cd eval-workshop
+
+# Virtual env
+python3 -m venv .venv
+source .venv/bin/activate
+
+# Dependencies
 pip install -r requirements.txt
-export BRAINTRUST_API_KEY="..."     # routes Anthropic through the Braintrust proxy
-# or
+
+# API keys (export in your shell or use a .env loader)
+export BRAINTRUST_API_KEY="..."
 export ANTHROPIC_API_KEY="..."
+
+# Verify
+python3 -c "import braintrust, anthropic; print('OK')"
+bt projects list
 ```
 
 In the Braintrust UI for your project, upload the two datasets via **Datasets → New Dataset**. The UI auto-names them based on the filename — accept the defaults:
