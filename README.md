@@ -60,10 +60,7 @@ Tick each one off as you go. Each module has its own README with the detail.
 - [ ] **2. Module 10 — Multi-step agent + tracing.** See `module-10/README.md`
 - [ ] **3. Module 12 — Online scoring.** See `module-12/README.md`
 - [ ] **4. Module 14 — Improvement loop.** See `module-14/README.md`
-
-### Stretch (if you finish early)
-
-- [ ] **Playground — same primitives, no code.** See `module-playground/README.md`
+- [ ] **5. Playground — same primitives, no code.** See `module-playground/README.md`
 
 ## Why the modules split offline vs online
 
