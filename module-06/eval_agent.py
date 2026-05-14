@@ -64,11 +64,23 @@ def analysis_groundedness(input, output, expected, metadata=None, **_):
     md = _ensure_dict(metadata)
     metrics_json = json.dumps(md.get("metrics", {}), default=str)
     return _judge(
-        f"""Score whether the numbers in the analysis are grounded in the metrics. Apply STRICT criteria — figures that are interpreted, rounded, or characterized rather than copied directly count as PARTIAL.
+        f"""Score whether every numeric or quantitative claim in the analysis is grounded VERBATIM in the metrics. Apply VERY STRICT criteria.
 
 Pick exactly ONE of:
-  - GROUNDED  (1.0): every numeric or quantitative claim in the analysis appears verbatim in (or is exact trivial arithmetic on) the metrics. No rounding, no qualitative substitutions ("substantial", "minimal"), no inferred trends.
-  - PARTIAL   (0.5): mostly grounded but contains rounding, vague quantifiers, or inferred patterns not present in the metrics
+
+  - GROUNDED  (1.0): every figure appears in the metrics with identical units, precision, and formatting:
+      * "21800000" stays "21,800,000" or "$21,800,000" — NOT "$21.8M" or "$21.8 million"
+      * Dates stay in the ISO form they appear in the metrics — NOT "April 15" or "mid-April"
+      * No percentages computed by the analysis that aren't in the metrics
+      * No qualitative substitutions for numbers ("substantial", "significant", "modest", "a large")
+
+  - PARTIAL   (0.5): figures match in essence but are reformatted or characterized — for example:
+      * Abbreviated currency ($21.8M, $21.8 million, ~$22M)
+      * Reformatted dates (April 15, mid-April, April 2025)
+      * Computed percentages or ratios not present in the metrics
+      * Vague quantifiers ("substantial", "significant", "large", "small") replacing exact figures
+      * Trivial rounding (e.g., 21,847,392 → 21.8M)
+
   - FABRICATED (0.0): cites figures not in the metrics, or contradicts the metrics
 
 Metrics: {metrics_json}

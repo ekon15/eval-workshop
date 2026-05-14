@@ -15,7 +15,9 @@ from .prompts import ANALYSIS_BASELINE
 MODEL = os.environ.get("EVAL_MODEL", "claude-haiku-4-5-20251001")
 
 # Default user-message template — substitutes metrics into the prompt.
-DEFAULT_USER_TEMPLATE = """Company: {company_name} ({ticker})
+# Kept aligned with scripts/seed_playground_prompts.py:USER_TEMPLATE so
+# Python and Playground evals see the same user message structure.
+DEFAULT_USER_TEMPLATE = """Company: {ticker}
 Date range: {start_date} to {end_date}
 
 Precomputed metrics from the warehouse + script:
@@ -53,10 +55,8 @@ def analyze_metrics(ticker: str, start_date: str, end_date: str,
 
     sys_prompt = system_prompt or ANALYSIS_BASELINE
     template = user_template or DEFAULT_USER_TEMPLATE
-    company_name = (metrics.get("company") or {}).get("name", ticker)
 
     user_msg = template.format(
-        company_name=company_name,
         ticker=ticker,
         start_date=start_date,
         end_date=end_date,
