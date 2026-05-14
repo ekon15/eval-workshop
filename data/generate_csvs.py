@@ -28,7 +28,7 @@ COMPANIES = [
     ("FJDL", "Fjordal Banking",      "Financials",     "NO", "active"),
     ("OSLB", "Oslo Beverages",       "Consumer",       "NO", "active"),
     ("CLVR", "Clavier Software",     "Technology",     "FR", "active"),
-    ("GROK", "Grokstad Mining",      "Materials",      "NO", "active"),  # easter egg: no transactions
+    ("GROK", "Grokstad Mining",      "Materials",      "NO", "active"),  # failure mode: no transactions
 ]
 
 
@@ -44,17 +44,17 @@ def main():
 
     for ticker, *_ in COMPANIES:
         if ticker == "GROK":
-            continue   # easter egg 1: no transactions
+            continue   # failure mode 1: no transactions
         n = random.randint(8, 20)
         for _ in range(n):
             trade_date = start + timedelta(days=random.randint(0, 270))
-            side = "BUY" if ticker == "HRZN" else random.choice(["BUY", "SELL"])  # easter egg 2
+            side = "BUY" if ticker == "HRZN" else random.choice(["BUY", "SELL"])  # failure mode 2
             quantity = random.choice([100, 250, 500, 1000, 2500])
             price = round(random.uniform(45.0, 280.0), 2)
             transactions.append((next_id, ticker, trade_date.isoformat(), side, quantity, price, "PORT-001"))
             next_id += 1
 
-    # easter egg 3: one anomalous ASPN trade (off by 100x in quantity)
+    # failure mode 3: one anomalous ASPN trade (off by 100x in quantity)
     transactions.append((next_id, "ASPN", "2025-04-15", "BUY", 250000, 87.50, "PORT-001"))
     transactions.sort(key=lambda r: (r[1], r[2]))  # sort by ticker, date
 

@@ -12,8 +12,8 @@ You'll spot a failure pattern in the baseline, propose a prompt change, rerun, a
 ## Run
 
 ```bash
-python module-14/eval_baseline.py     # produces module-14-baseline
-python module-14/eval_improved.py     # produces module-14-improved
+python3 module-14/eval_baseline.py     # produces module-14-baseline
+python3 module-14/eval_improved.py     # produces module-14-improved
 ```
 
 ## Checkpoint

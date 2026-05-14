@@ -20,10 +20,10 @@ Click into each LLM call to see the messages sent (including the tool definition
 ## Run
 
 ```bash
-python module-10/interactive.py
+python3 module-10/interactive.py
 ```
 
-Try at least 5 invocations. Suggested inputs to surface the easter eggs:
+Try at least 5 invocations. Suggested inputs to surface the built-in failure modes:
 
 | Ticker | Start       | End         | Look for |
 |--------|-------------|-------------|----------|

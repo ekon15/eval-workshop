@@ -49,7 +49,7 @@ Configure an LLM-as-judge scorer in the Braintrust UI that runs automatically on
 ## Run
 
 ```bash
-python module-12/generate_runs.py
+python3 module-12/generate_runs.py
 ```
 
 This fires ~22 skill invocations across the full ticker set. As each log lands, the online scorer picks it up server-side.

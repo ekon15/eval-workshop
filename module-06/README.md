@@ -1,45 +1,35 @@
 # Module 06 — Build a simple eval in code
 
-You will run the portfolio analysis skill agent against a 15-row gold-standard dataset and score it with two smoke tests and two LLM-as-judge scorers.
+Run an eval against the `Gold Standard` dataset and score 15 rows with two LLM-as-judge scorers.
 
 ## What you'll see
 
-The agent runs three steps per row:
-1. Hardcoded SQL fetches transactions for a company in a date range
-2. A Python script computes trading metrics over those rows
-3. An LLM produces a written analysis from the metrics
+Each dataset row already contains the precomputed metrics in metadata (the SQL fetch and Python compute have been pre-run). The eval makes a single LLM call per row — the analysis step — and scores the result.
 
-Each step is traced as its own span. The scorers tell you whether the SQL ran, the Python ran, the analysis covered the right topics, and the analysis numbers are grounded in the Python output.
+Two scorers, both discrete categorical (COMPLETE / PARTIAL / MISSING):
 
-## Setup
-
-```bash
-cd ../  # repo root
-pip install -r requirements.txt
-export BRAINTRUST_API_KEY="..."
-export OPENAI_API_KEY="..."        # or use proxy
-```
-
-(The CSVs in `data/` are pre-generated and committed — no build step.)
+- `analysis_completeness` — does the analysis cover position direction, capital, PnL, anomalies?
+- `analysis_groundedness` — are the numbers cited in the analysis traceable to the metrics?
 
 ## Run
 
 ```bash
-python module-06/eval_agent.py
+python3 module-06/eval_agent.py
 ```
 
 Open the experiment URL in Braintrust. Inspect:
-- Which rows scored well on `analysis_completeness`
-- Which rows fail `analysis_groundedness` (hallucinated numbers)
-- Which rows have a non-null `metadata.fetch_error` or `metadata.compute_error`
+
+- Rows that scored 1.0 on both scorers — clean
+- Rows that scored 0.5 on `analysis_groundedness` — analysis fabricated or rounded sloppily
+- Rows that scored 0.5 or 0.0 on `analysis_completeness` — analysis missed required topics
 
 ## Checkpoint
 
-You should see 15 rows with four scores each in the Braintrust UI.
+15 rows scored. Click into a failing row and read the judge's `reason` — that's the signal you'd act on in the improvement loop (module 14).
 
-## Easter eggs to notice
+## Built-in failure modes to notice
 
-- **Grokstad Mining** has no transactions in range — the analysis should say so
-- **Aspen Energy** has one anomalous trade — the analysis should flag it
-- **Horizon Materials** has only buys — the analysis should mention the unrealized position
-- **"Old Name Corp"** isn't in the companies table — the agent reports it can't resolve
+- **GROK** — zero transactions in range; analysis should state so
+- **ASPN** — one anomalous trade (~$21.8M); analysis should flag it
+- **HRZN** — only buys, no sells; analysis should note accumulation
+- **XXXX** — unknown ticker; analysis should state no transactions found
