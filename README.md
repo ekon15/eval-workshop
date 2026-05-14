@@ -37,7 +37,6 @@ export ANTHROPIC_API_KEY="..."
 
 # Verify
 python3 -c "import braintrust, anthropic; print('OK')"
-bt projects list
 ```
 
 In the Braintrust UI for your project, upload the two datasets via **Datasets → New Dataset**. The UI auto-names them based on the filename — accept the defaults:
