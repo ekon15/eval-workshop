@@ -17,28 +17,54 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 from src.agent import run_skill
 
 
+SCENARIOS = [
+    ("VRTC", "2025-01-01", "2025-09-30", "normal case"),
+    ("GROK", "2025-01-01", "2025-09-30", "no transactions in range"),
+    ("ASPN", "2025-04-01", "2025-04-30", "anomalous trade (100x quantity)"),
+    ("HRZN", "2025-01-01", "2025-09-30", "accumulation only — no sells"),
+    ("XXXX", "2025-01-01", "2025-09-30", "unknown ticker, empty result"),
+]
+
+
+def _print_menu():
+    print("\nPick a scenario:")
+    for i, (ticker, start, end, note) in enumerate(SCENARIOS, 1):
+        print(f"  {i}. {ticker:<5} {start} → {end}   {note}")
+    print("  c. custom (enter ticker + dates)")
+    print("  q. quit")
+
+
+def _custom():
+    ticker = input("Ticker: ").strip().upper()
+    start = input("Start date (YYYY-MM-DD): ").strip()
+    end = input("End date (YYYY-MM-DD): ").strip()
+    return ticker, start, end
+
+
 def main():
     print("Portfolio analysis skill — interactive runner.")
-    print("Enter a ticker, then a start and end date (YYYY-MM-DD).")
-    print("Type 'quit' to exit.\n")
-
     while True:
-        ticker = input("Ticker: ").strip().upper()
-        if ticker.lower() in ("quit", "exit", "q"):
+        _print_menu()
+        choice = input("\n> ").strip().lower()
+        if choice in ("q", "quit", "exit"):
             return
-        start = input("Start date (YYYY-MM-DD): ").strip()
-        end = input("End date (YYYY-MM-DD): ").strip()
+        if choice == "c":
+            ticker, start, end = _custom()
+        elif choice.isdigit() and 1 <= int(choice) <= len(SCENARIOS):
+            ticker, start, end, _ = SCENARIOS[int(choice) - 1]
+        else:
+            print(f"Unknown choice: {choice!r}")
+            continue
 
-        print("\nRunning skill...\n")
+        print(f"\nRunning skill: {ticker} {start} → {end}\n")
         result = run_skill(ticker, start, end)
 
-        print(f"Turns: {result.turns}")
-        print(f"Tools used: {[c['name'] for c in result.tool_calls]}")
+        print(f"Turns: {result.turns}  Tools: {[c['name'] for c in result.tool_calls]}")
         if result.tool_errors:
             print(f"Tool errors: {result.tool_errors}")
         print("\nAnalysis:")
         print(result.analysis)
-        print("\n" + "=" * 60 + "\n")
+        print("\n" + "=" * 60)
 
 
 if __name__ == "__main__":
