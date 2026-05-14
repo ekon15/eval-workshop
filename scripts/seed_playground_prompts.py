@@ -29,7 +29,10 @@ import braintrust
 from src.prompts import ANALYSIS_BASELINE
 
 API_BASE = "https://api.braintrust.dev"
-MODEL = "claude-haiku-4-5-20251001"
+# Use the base model name (no date suffix). The date-suffixed variant can
+# get routed to a custom AI provider in some orgs; the base name resolves
+# cleanly through the default Anthropic provider for every attendee.
+MODEL = "claude-haiku-4-5"
 
 
 def _require_env(key: str) -> str:
