@@ -2,11 +2,25 @@
 
 You'll spot a failure pattern in the baseline, propose a prompt change, rerun, and verify in the eval.
 
+## Dataset
+
+Both runs evaluate against the **Failure Modes** dataset (6 rows) — not Gold Standard. Each row is one of the engineered failure modes the analysis step should handle:
+
+- empty result (no transactions in range)
+- anomaly (unusually large trade)
+- accumulation only (buys but no sells)
+- unresolved company (unknown ticker)
+
+This is deliberately a tiny, focused dataset — the point is to see the improvement loop, not to grind statistics.
+
 ## What you'll do
 
-1. **Run the baseline.** The dataset is six rows focused on the failure modes the agent should handle (empty result, anomaly, accumulation-only, unresolved company).
+1. **Run the baseline.** Uses the default `ANALYSIS_BASELINE` prompt from `src/prompts.py` — a generic "junior analyst" prompt with no explicit failure-mode rules.
 2. **Open the experiment** in Braintrust. Inspect rows that scored < 1.0 on `handled_correctly`. Read the judge's rationale.
-3. **Run the improved version.** The system prompt has been rewritten to give explicit rules for each failure mode.
+3. **Run the improved version.** Same task, same dataset, same scorer — only the system prompt changes. The improved prompt (`IMPROVED_SYSTEM` in `eval_improved.py`) adds explicit `CRITICAL OUTPUT RULES` for each failure mode:
+    - `transaction_count == 0` → exact one-line output, no speculation
+    - `anomalies` includes "unusually large" → must cite date and dollar amount
+    - `anomalies` includes "no sells in range" → must note position is still held
 4. **Compare experiments side-by-side.** Did the metric move?
 
 ## Run
