@@ -39,6 +39,8 @@ export ANTHROPIC_API_KEY="..."
 python3 -c "import braintrust, anthropic; print('OK')"
 ```
 
+> Note: `pip install braintrust` also installs a `bt` CLI binary. This workshop uses the Python SDK throughout — the CLI is not required and not used in any module.
+
 In the Braintrust UI for your project, upload the two datasets via **Datasets → New Dataset**. The UI auto-names them based on the filename — accept the defaults:
 
   - `Gold Standard` ← `data/gold_standard.csv`
